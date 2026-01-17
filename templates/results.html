@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h4 class="mb-3">📊 Reconciliation Results</h4>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Total Orders</h6>
+                <h3>{{ order_summary.total_orders }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Completed Orders</h6>
+                <h3>{{ order_summary.completed_orders }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h6>Missing Income Orders</h6>
+                <h3 class="text-danger">
+                    {{ recon_summary.missing_income_orders }}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if can_download %}
+<a href="/download" class="btn btn-success mb-3">
+    ⬇ Download Missing Income Report (Excel)
+</a>
+{% endif %}
+
+{% if missing_report|length > 0 %}
+<div class="table-responsive">
+    <table class="table table-bordered table-sm">
+        <thead class="table-dark">
+            <tr>
+                {% for key in missing_report[0].keys() %}
+                    <th>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in missing_report %}
+                <tr>
+                    {% for value in row.values() %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-success">
+    ✅ No missing income orders found!
+</div>
+{% endif %}
+
+<a href="/" class="btn btn-secondary mt-4">← Back</a>
+
+{% endblock %}
