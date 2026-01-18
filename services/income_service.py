@@ -23,10 +23,8 @@ class IncomeService:
         excel = pd.ExcelFile(self.source)
         sheet_names = excel.sheet_names
 
-        # Prefer explicit Income sheet
         sheet_name = "Income" if "Income" in sheet_names else sheet_names[0]
 
-        # Preview rows to detect header
         preview = pd.read_excel(
             excel,
             sheet_name=sheet_name,
@@ -39,14 +37,12 @@ class IncomeService:
         if header_row is None:
             raise ValueError("❌ Could not detect header row in Income sheet")
 
-        # Load actual data
         self.income_df = pd.read_excel(
             excel,
             sheet_name=sheet_name,
             header=header_row
         )
 
-        # Normalize column names
         self.income_df.columns = (
             self.income_df.columns
             .astype(str)
@@ -68,7 +64,6 @@ class IncomeService:
             values = row.astype(str).str.lower()
             if any(any(k in v for k in keywords) for v in values):
                 return idx
-
         return None
 
     def _detect_order_id_column(self) -> Optional[str]:
@@ -78,11 +73,21 @@ class IncomeService:
             for key in candidates:
                 if key in col:
                     return col
-
         return None
 
+    def _safe_sum(self, df: pd.DataFrame, column_name: str) -> float:
+        col = column_name.lower()
+        if col not in df.columns:
+            return 0.0
+
+        return float(
+            pd.to_numeric(df[col], errors="coerce")
+            .fillna(0)
+            .sum()
+        )
+
     # --------------------------------------------------
-    # CORE LOGIC
+    # CORE MATCHING
     # --------------------------------------------------
     def get_income_order_ids(self) -> set:
         if self.income_df is None:
@@ -106,6 +111,9 @@ class IncomeService:
             .isin(income_ids)
         ]
 
+    # --------------------------------------------------
+    # 📦 RECONCILIATION SUMMARY (RESTORED)
+    # --------------------------------------------------
     def get_reconciliation_summary(self) -> dict:
         completed_ids = set(
             self.order_service
@@ -123,15 +131,71 @@ class IncomeService:
         }
 
     # --------------------------------------------------
-    # REPORTING
+    # 💵 ACTUAL RECEIVED INCOME SUMMARY
     # --------------------------------------------------
+    def get_actual_received_income_summary(self) -> dict:
+        if self.income_df is None:
+            self.load_income_data()
+
+        completed_orders = self.order_service.get_completed_orders()
+        completed_ids = set(
+            completed_orders["Order ID"]
+            .astype(str)
+            .str.strip()
+        )
+
+        matched_income = self.income_df[
+            self.income_df[self.order_id_column]
+            .astype(str)
+            .str.strip()
+            .isin(completed_ids)
+        ]
+
+        projected_income = self.order_service.get_projected_income_total()
+
+        ams_commission_fee = self._safe_sum(matched_income, "ams commission fee")
+        commission_fee = self._safe_sum(matched_income, "commission fee")
+        service_fee = self._safe_sum(matched_income, "service fee")
+        support_program_fee = self._safe_sum(matched_income, "support program fee")
+        transaction_fee = self._safe_sum(matched_income, "transaction fee")
+        withholding_tax = self._safe_sum(matched_income, "withholding tax")
+        total_released_amount = self._safe_sum(
+            matched_income,
+            "total released amount (₱)"
+        )
+
+        return {
+            "Projected Income": projected_income,
+            "Actual Received Income": total_released_amount,
+            "AMS Commission Fee": ams_commission_fee,
+            "Commission Fee": commission_fee,
+            "Service Fee": service_fee,
+            "Support Program Fee": support_program_fee,
+            "Transaction Fee": transaction_fee,
+            "Withholding Tax": withholding_tax,
+            "Total Released Amount (₱)": total_released_amount,
+        }
+
+    # --------------------------------------------------
+    # 📤 EXPORT
+    # --------------------------------------------------
+    def export_missing_orders_to_excel(self) -> BytesIO:
+        report = self.get_missing_income_report()
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            report.to_excel(
+                writer,
+                index=False,
+                sheet_name="Missing Income Orders"
+            )
+
+        output.seek(0)
+        return output
+
     def get_missing_income_report(self) -> pd.DataFrame:
-        """
-        Detailed report for completed orders with no income record.
-        """
         missing = self.find_missing_income_orders()
 
-        # Normalize columns
         missing.columns = (
             missing.columns
             .astype(str)
@@ -152,35 +216,13 @@ class IncomeService:
             "username (buyer)": "Username (Buyer)",
         }
 
-        selected_cols = []
-        rename_map = {}
+        cols, rename = [], {}
+        for c, d in column_map.items():
+            if c in missing.columns:
+                cols.append(c)
+                rename[c] = d
 
-        for col, display in column_map.items():
-            if col in missing.columns:
-                selected_cols.append(col)
-                rename_map[col] = display
+        report = missing[cols].rename(columns=rename)
 
-        report = missing[selected_cols].rename(columns=rename_map)
-
-        # ✅ FINAL FIX:
-        # Replace NaN / None with empty string (clean UI & Excel)
-        report = report.fillna("")
-
-        return report
-
-    def export_missing_orders_to_excel(self) -> BytesIO:
-        """
-        Export missing income report to an in-memory Excel file.
-        """
-        report = self.get_missing_income_report()
-
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            report.to_excel(
-                writer,
-                index=False,
-                sheet_name="Missing Income Orders"
-            )
-
-        output.seek(0)
-        return output
+        # Clean NaN → blank
+        return report.fillna("")

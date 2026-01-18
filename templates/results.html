@@ -8,7 +8,6 @@
 
 <!-- Summary Cards -->
 <div class="row g-3 mb-4">
-
     <div class="col-12 col-md-4">
         <div class="card text-center shadow-sm">
             <div class="card-body">
@@ -41,7 +40,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 {% if can_download %}
@@ -52,45 +50,156 @@
 </div>
 {% endif %}
 
-{% if missing_report|length > 0 %}
-<div class="card shadow-sm">
-    <div class="card-body">
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#orders-tab">
+            📦 Orders
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#income-tab">
+            💵 Income Summary
+        </button>
+    </li>
+</ul>
 
-        <h6 class="fw-semibold mb-3">
-            ❌ Missing Income Order Details
-        </h6>
+<div class="tab-content">
 
-        <!-- 🔑 Horizontal scroll on mobile -->
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        {% for key in missing_report[0].keys() %}
-                            <th class="small">{{ key }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in missing_report %}
-                        <tr>
-                            {% for value in row.values() %}
-                                <td class="small">
-                                    {{ value }}
-                                </td>
+    <!-- ================= TAB 1: ORDERS ================= -->
+    <div class="tab-pane fade show active" id="orders-tab">
+        {% if missing_report|length > 0 %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h6 class="fw-semibold mb-3">
+                    ❌ Missing Income Order Details
+                </h6>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                {% for key in missing_report[0].keys() %}
+                                    <th class="small">{{ key }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in missing_report %}
+                                <tr>
+                                    {% for value in row.values() %}
+                                        <td class="small">{{ value }}</td>
+                                    {% endfor %}
+                                </tr>
                             {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </tbody>
+                    </table>
+                </div>
 
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-success text-center">
+            ✅ No missing income orders found!
+        </div>
+        {% endif %}
     </div>
+
+    <!-- ================= TAB 2: INCOME ================= -->
+    <div class="tab-pane fade" id="income-tab">
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h6 class="fw-semibold mb-3">
+                    💵 Projected vs Actual Income
+                </h6>
+
+                {% set shopee_fee = income_summary["Projected Income"]
+                                    - income_summary["Actual Received Income"] %}
+
+                <table class="table table-sm table-bordered mb-0">
+                    <tbody>
+                        <!-- 1️⃣ Projected Income -->
+                        <tr class="table-light">
+                            <th>Projected Income</th>
+                            <td class="text-end fw-bold">
+                                ₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}
+                            </td>
+                        </tr>
+
+                        <!-- 2️⃣ Shopee Fee (NEGATIVE & RED) -->
+                        <tr class="table-warning">
+                            <th>Shopee Fee</th>
+                            <td class="text-end fw-bold text-danger">
+                                -₱ {{ "%.2f"|format(shopee_fee) }}
+                            </td>
+                        </tr>
+
+                        <!-- 3️⃣ Actual Received Income -->
+                        <tr class="table-success">
+                            <th>Actual Received Income</th>
+                            <td class="text-end fw-bold">
+                                ₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}
+                            </td>
+                        </tr>
+
+                        <!-- Breakdown -->
+                        <tr>
+                            <th colspan="2">Shopee Fee Breakdown</th>
+                        </tr>
+
+                        <tr>
+                            <td>AMS Commission Fee</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["AMS Commission Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Commission Fee</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["Commission Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Service Fee</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["Service Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Support Program Fee</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["Support Program Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Transaction Fee</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["Transaction Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Withholding Tax</td>
+                            <td class="text-end text-danger">
+                                {{ "%.2f"|format(income_summary["Withholding Tax"]) }}
+                            </td>
+                        </tr>
+
+                        <tr class="table-success">
+                            <th>Total Released Amount (₱)</th>
+                            <th class="text-end">
+                                ₱ {{ "%.2f"|format(income_summary["Total Released Amount (₱)"]) }}
+                            </th>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+    </div>
+
 </div>
-{% else %}
-<div class="alert alert-success text-center">
-    ✅ No missing income orders found!
-</div>
-{% endif %}
 
 <div class="d-grid mt-4">
     <a href="/" class="btn btn-secondary">
