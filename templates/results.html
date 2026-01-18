@@ -2,56 +2,28 @@
 
 {% block content %}
 
-<h5 class="fw-bold mb-3 text-center">
-    📊 Reconciliation Results
-</h5>
+<!-- ================= LOCAL-ONLY STYLES ================= -->
+<style>
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 260px;
 
-<!-- Summary Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">Total Orders</div>
-                <div class="fs-3 fw-bold">
-                    {{ order_summary.total_orders }}
-                </div>
-            </div>
-        </div>
-    </div>
+    /* ✅ Center charts horizontally & vertically */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-    <div class="col-12 col-md-4">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">Completed Orders</div>
-                <div class="fs-3 fw-bold">
-                    {{ order_summary.completed_orders }}
-                </div>
-            </div>
-        </div>
-    </div>
+@media (max-width: 768px) {
+    .chart-container {
+        height: 220px;
+    }
+}
+</style>
 
-    <div class="col-12 col-md-4">
-        <div class="card text-center shadow-sm border-danger">
-            <div class="card-body">
-                <div class="text-muted small">Missing Income Orders</div>
-                <div class="fs-3 fw-bold text-danger">
-                    {{ recon_summary.missing_income_orders }}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% if can_download %}
-<div class="d-grid mb-3">
-    <a href="/download" class="btn btn-success">
-        ⬇ Download Missing Income Report (Excel)
-    </a>
-</div>
-{% endif %}
-
-<!-- Tabs -->
-<ul class="nav nav-tabs mb-3" role="tablist">
+<!-- ================= TABS ================= -->
+<ul class="nav nav-tabs mb-3">
     <li class="nav-item">
         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#orders-tab">
             📦 Orders
@@ -62,26 +34,65 @@
             💵 Income Summary
         </button>
     </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#graph-tab">
+            📊 Income Graph Summary
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content">
 
     <!-- ================= TAB 1: ORDERS ================= -->
     <div class="tab-pane fade show active" id="orders-tab">
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <div class="text-muted small">Total Orders</div>
+                        <div class="fs-3 fw-bold">{{ order_summary.total_orders }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <div class="text-muted small">Completed Orders</div>
+                        <div class="fs-3 fw-bold">{{ order_summary.completed_orders }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm border-danger">
+                    <div class="card-body">
+                        <div class="text-muted small">Missing Income Orders</div>
+                        <div class="fs-3 fw-bold text-danger">{{ recon_summary.missing_income_orders }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if can_download %}
+        <div class="d-grid mb-3">
+            <a href="/download" class="btn btn-success">
+                ⬇ Download Missing Income Report (Excel)
+            </a>
+        </div>
+        {% endif %}
+
         {% if missing_report|length > 0 %}
         <div class="card shadow-sm">
             <div class="card-body">
-
-                <h6 class="fw-semibold mb-3">
-                    ❌ Missing Income Order Details
-                </h6>
-
+                <h6 class="fw-semibold mb-3">❌ Missing Income Order Details</h6>
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0">
+                    <table class="table table-sm table-bordered">
                         <thead class="table-dark">
                             <tr>
                                 {% for key in missing_report[0].keys() %}
-                                    <th class="small">{{ key }}</th>
+                                    <th>{{ key }}</th>
                                 {% endfor %}
                             </tr>
                         </thead>
@@ -89,14 +100,13 @@
                             {% for row in missing_report %}
                                 <tr>
                                     {% for value in row.values() %}
-                                        <td class="small">{{ value }}</td>
+                                        <td>{{ value }}</td>
                                     {% endfor %}
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
         {% else %}
@@ -106,105 +116,199 @@
         {% endif %}
     </div>
 
-    <!-- ================= TAB 2: INCOME ================= -->
+    <!-- ================= TAB 2: INCOME SUMMARY ================= -->
     <div class="tab-pane fade" id="income-tab">
+
+        {% set shopee_fee = income_summary["Projected Income"] - income_summary["Actual Received Income"] %}
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <i class="bi bi-graph-up-arrow fs-2 text-primary"></i>
+                        <div class="small text-muted mt-2">Projected Income</div>
+                        <div class="fs-4 fw-bold">₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm border-warning">
+                    <div class="card-body">
+                        <i class="bi bi-receipt-cutoff fs-2 text-danger"></i>
+                        <div class="small text-muted mt-2">Shopee Fee</div>
+                        <div class="fs-4 fw-bold text-danger">-₱ {{ "%.2f"|format(shopee_fee) }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm border-success">
+                    <div class="card-body">
+                        <i class="bi bi-wallet2 fs-2 text-success"></i>
+                        <div class="small text-muted mt-2">Actual Received Income</div>
+                        <div class="fs-4 fw-bold text-success">₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card shadow-sm">
             <div class="card-body">
-
-                <h6 class="fw-semibold mb-3">
-                    💵 Projected vs Actual Income
-                </h6>
-
-                {% set shopee_fee = income_summary["Projected Income"]
-                                    - income_summary["Actual Received Income"] %}
-
-                <table class="table table-sm table-bordered mb-0">
+                <table class="table table-sm table-bordered">
                     <tbody>
-                        <!-- 1️⃣ Projected Income -->
-                        <tr class="table-light">
-                            <th>Projected Income</th>
-                            <td class="text-end fw-bold">
-                                ₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}
-                            </td>
-                        </tr>
-
-                        <!-- 2️⃣ Shopee Fee (NEGATIVE & RED) -->
-                        <tr class="table-warning">
-                            <th>Shopee Fee</th>
-                            <td class="text-end fw-bold text-danger">
-                                -₱ {{ "%.2f"|format(shopee_fee) }}
-                            </td>
-                        </tr>
-
-                        <!-- 3️⃣ Actual Received Income -->
-                        <tr class="table-success">
-                            <th>Actual Received Income</th>
-                            <td class="text-end fw-bold">
-                                ₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}
-                            </td>
-                        </tr>
-
-                        <!-- Breakdown -->
-                        <tr>
-                            <th colspan="2">Shopee Fee Breakdown</th>
-                        </tr>
-
-                        <tr>
-                            <td>AMS Commission Fee</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["AMS Commission Fee"]) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Commission Fee</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["Commission Fee"]) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Service Fee</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["Service Fee"]) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Support Program Fee</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["Support Program Fee"]) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Transaction Fee</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["Transaction Fee"]) }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Withholding Tax</td>
-                            <td class="text-end text-danger">
-                                {{ "%.2f"|format(income_summary["Withholding Tax"]) }}
-                            </td>
-                        </tr>
-
-                        <tr class="table-success">
-                            <th>Total Released Amount (₱)</th>
-                            <th class="text-end">
-                                ₱ {{ "%.2f"|format(income_summary["Total Released Amount (₱)"]) }}
-                            </th>
-                        </tr>
+                        <tr><th>Projected Income</th><td class="text-end">₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}</td></tr>
+                        <tr class="table-warning"><th>Shopee Fee</th><td class="text-end text-danger">-₱ {{ "%.2f"|format(shopee_fee) }}</td></tr>
+                        <tr class="table-success"><th>Actual Received Income</th><td class="text-end">₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}</td></tr>
+                        <tr><th colspan="2">Shopee Fee Breakdown</th></tr>
+                        <tr><td>AMS Commission Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["AMS Commission Fee"]) }}</td></tr>
+                        <tr><td>Commission Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Commission Fee"]) }}</td></tr>
+                        <tr><td>Service Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Service Fee"]) }}</td></tr>
+                        <tr><td>Support Program Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Support Program Fee"]) }}</td></tr>
+                        <tr><td>Transaction Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Transaction Fee"]) }}</td></tr>
+                        <tr><td>Withholding Tax</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Withholding Tax"]) }}</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
 
+    <!-- ================= TAB 3: GRAPH SUMMARY ================= -->
+    <div class="tab-pane fade" id="graph-tab">
+
+        <script type="application/json" id="income-data">
+            {{ income_summary | tojson }}
+        </script>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6>Projected vs Actual vs Shopee Fee (Bar)</h6>
+                <div class="chart-container">
+                    <canvas id="incomeBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6>Income Distribution (Pie)</h6>
+                <div class="chart-container">
+                    <canvas id="incomePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Shopee Fee Breakdown</h6>
+                <div class="chart-container">
+                    <canvas id="feeBreakdownChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
 </div>
 
+<!-- ================= CHART SCRIPT ================= -->
+<script>
+Chart.register(ChartDataLabels);
+
+const incomeData = JSON.parse(document.getElementById("income-data").textContent);
+const projected = incomeData["Projected Income"];
+const actual = incomeData["Actual Received Income"];
+const shopeeFee = projected - actual;
+
+/* BAR CHART */
+new Chart(incomeBarChart, {
+    type: "bar",
+    data: {
+        labels: ["Projected", "Actual", "Shopee Fee"],
+        datasets: [{
+            data: [projected, actual, shopeeFee],
+            backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 24 } },
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                anchor: "end",
+                align: "top",
+                offset: 4,
+                formatter: v => ((v / projected) * 100).toFixed(1) + "%",
+                font: { weight: "bold" }
+            }
+        },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+/* PIE: INCOME DISTRIBUTION */
+new Chart(incomePieChart, {
+    type: "pie",
+    data: {
+        labels: ["Projected", "Actual", "Shopee Fee"],
+        datasets: [{
+            data: [projected, actual, shopeeFee],
+            backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: "bottom", align: "center" },
+            datalabels: {
+                color: "#fff",
+                formatter: (v, ctx) => {
+                    const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                    return ((v / total) * 100).toFixed(1) + "%";
+                }
+            }
+        }
+    }
+});
+
+/* PIE: FEE BREAKDOWN */
+new Chart(feeBreakdownChart, {
+    type: "pie",
+    data: {
+        labels: ["AMS", "Commission", "Service", "Support", "Transaction", "Tax"],
+        datasets: [{
+            data: [
+                Math.abs(incomeData["AMS Commission Fee"]),
+                Math.abs(incomeData["Commission Fee"]),
+                Math.abs(incomeData["Service Fee"]),
+                Math.abs(incomeData["Support Program Fee"]),
+                Math.abs(incomeData["Transaction Fee"]),
+                Math.abs(incomeData["Withholding Tax"])
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: "bottom", align: "center" },
+            datalabels: {
+                color: "#fff",
+                formatter: (v, ctx) => {
+                    const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                    return ((v / total) * 100).toFixed(1) + "%";
+                }
+            }
+        }
+    }
+});
+</script>
+
+<!-- ================= BACK BUTTON ================= -->
 <div class="d-grid mt-4">
-    <a href="/" class="btn btn-secondary">
-        ← Back
-    </a>
+    <a href="/" class="btn btn-secondary">← Back</a>
 </div>
 
 {% endblock %}
