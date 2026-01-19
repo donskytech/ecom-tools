@@ -43,8 +43,11 @@ def index():
         missing_report_df = income_service.get_missing_income_report()
         income_summary = income_service.get_actual_received_income_summary()
 
-        # 🏆 NEW: TOP 20 PRODUCTS (COMPLETED ORDERS)
+        # --------------------------------------------------
+        # 🏆 PRODUCT OVERVIEW DATA
+        # --------------------------------------------------
         top_products = order_service.get_top_20_products_completed()
+        least_products = order_service.get_bottom_20_products_completed()
 
         # --------------------------------------------------
         # CACHE EXCEL FOR DOWNLOAD
@@ -57,7 +60,8 @@ def index():
             recon_summary=recon_summary,
             missing_report=missing_report_df.to_dict(orient="records"),
             income_summary=income_summary,
-            top_products=top_products,          # ✅ CRITICAL LINE
+            top_products=top_products,        # 🔥 High sales
+            least_products=least_products,    # 🐢 Low sales
             can_download=len(missing_report_df) > 0
         )
 

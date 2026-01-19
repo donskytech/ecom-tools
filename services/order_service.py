@@ -17,7 +17,7 @@ class OrderService:
     def load_data(self):
         self.df = pd.read_excel(self.source)
 
-        # Normalize column names (trim spaces)
+        # Normalize column names
         self.df.columns = (
             self.df.columns
             .astype(str)
@@ -56,11 +56,6 @@ class OrderService:
     def get_projected_income_total(self) -> float:
         completed = self.get_completed_orders()
 
-        if "Product Subtotal" not in completed.columns:
-            raise ValueError(
-                "❌ 'Product Subtotal' column not found in orders file"
-            )
-
         subtotals = pd.to_numeric(
             completed["Product Subtotal"],
             errors="coerce"
@@ -69,13 +64,31 @@ class OrderService:
         return float(subtotals.sum())
 
     # --------------------------------------------------
-    # 🏆 TOP 20 PRODUCTS (SORTED BY TOTAL REVENUE)
+    # 🏆 TOP 20 HIGH SALES PRODUCTS (BY REVENUE)
     # --------------------------------------------------
     def get_top_20_products_completed(self) -> list[dict]:
         """
-        Returns Top 20 products from COMPLETED orders,
-        sorted by TOTAL REVENUE (highest first).
+        Highest revenue products (Completed Orders)
         """
+        return self._aggregate_products(
+            ascending=False
+        )
+
+    # --------------------------------------------------
+    # 🐢 TOP 20 LEAST SALES PRODUCTS (BY REVENUE)
+    # --------------------------------------------------
+    def get_bottom_20_products_completed(self) -> list[dict]:
+        """
+        Lowest revenue products (Completed Orders)
+        """
+        return self._aggregate_products(
+            ascending=True
+        )
+
+    # --------------------------------------------------
+    # INTERNAL AGGREGATION LOGIC
+    # --------------------------------------------------
+    def _aggregate_products(self, ascending: bool) -> list[dict]:
         completed = self.get_completed_orders()
 
         required_cols = {"Product Name", "Quantity", "Product Subtotal"}
@@ -105,8 +118,7 @@ class OrderService:
                 total_revenue=("Product Subtotal", "sum")
             )
             .reset_index()
-            # 🔥 SORT BY REVENUE INSTEAD OF QUANTITY
-            .sort_values("total_revenue", ascending=False)
+            .sort_values("total_revenue", ascending=ascending)
             .head(20)
         )
 

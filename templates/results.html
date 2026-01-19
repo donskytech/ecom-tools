@@ -4,19 +4,20 @@
 
 <!-- ================= LOCAL-ONLY STYLES ================= -->
 <style>
-.chart-container {
-    position: relative;
-    width: 100%;
-    height: 260px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-@media (max-width: 768px) {
     .chart-container {
-        height: 220px;
+        position: relative;
+        width: 100%;
+        height: 260px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
-}
+
+    @media (max-width: 768px) {
+        .chart-container {
+            height: 220px;
+        }
+    }
 </style>
 
 <!-- ================= TABS ================= -->
@@ -32,10 +33,7 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link"
-                id="graph-tab-btn"
-                data-bs-toggle="tab"
-                data-bs-target="#graph-tab">
+        <button class="nav-link" id="graph-tab-btn" data-bs-toggle="tab" data-bs-target="#graph-tab">
             📊 Income Graph Summary
         </button>
     </li>
@@ -127,7 +125,7 @@
     <div class="tab-pane fade" id="income-tab">
 
         {% set shopee_fee = income_summary["Projected Income"]
-                            - income_summary["Actual Received Income"] %}
+        - income_summary["Actual Received Income"] %}
 
         <div class="row g-3 mb-4">
             <div class="col-md-4">
@@ -171,16 +169,47 @@
             <div class="card-body">
                 <table class="table table-sm table-bordered">
                     <tbody>
-                        <tr><th>Projected Income</th><td class="text-end">₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}</td></tr>
-                        <tr class="table-warning"><th>Shopee Fee</th><td class="text-end text-danger">-₱ {{ "%.2f"|format(shopee_fee) }}</td></tr>
-                        <tr class="table-success"><th>Actual Received Income</th><td class="text-end">₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}</td></tr>
-                        <tr><th colspan="2">Shopee Fee Breakdown</th></tr>
-                        <tr><td>AMS Commission Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["AMS Commission Fee"]) }}</td></tr>
-                        <tr><td>Commission Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Commission Fee"]) }}</td></tr>
-                        <tr><td>Service Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Service Fee"]) }}</td></tr>
-                        <tr><td>Support Program Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Support Program Fee"]) }}</td></tr>
-                        <tr><td>Transaction Fee</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Transaction Fee"]) }}</td></tr>
-                        <tr><td>Withholding Tax</td><td class="text-end text-danger">{{ "%.2f"|format(income_summary["Withholding Tax"]) }}</td></tr>
+                        <tr>
+                            <th>Projected Income</th>
+                            <td class="text-end">₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}</td>
+                        </tr>
+                        <tr class="table-warning">
+                            <th>Shopee Fee</th>
+                            <td class="text-end text-danger">-₱ {{ "%.2f"|format(shopee_fee) }}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <th>Actual Received Income</th>
+                            <td class="text-end">₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}</td>
+                        </tr>
+                        <tr>
+                            <th colspan="2">Shopee Fee Breakdown</th>
+                        </tr>
+                        <tr>
+                            <td>AMS Commission Fee</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["AMS Commission Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Commission Fee</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["Commission Fee"]) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Service Fee</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["Service Fee"]) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Support Program Fee</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["Support Program Fee"]) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Transaction Fee</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["Transaction Fee"]) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Withholding Tax</td>
+                            <td class="text-end text-danger">{{ "%.2f"|format(income_summary["Withholding Tax"]) }}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -223,12 +252,15 @@
     </div>
 
     <!-- ================= TAB 4: PRODUCT OVERVIEW ================= -->
+    <!-- ================= TAB 4: PRODUCT OVERVIEW ================= -->
     <div class="tab-pane fade" id="product-tab">
 
-        <div class="card shadow-sm">
+        <!-- 🔥 TOP 20 HIGH SALES -->
+        <div class="card shadow-sm mb-4">
             <div class="card-body">
-
-                <h6 class="fw-semibold mb-3">🏆 Top 20 Products (Completed Orders)</h6>
+                <h6 class="fw-semibold mb-3">
+                    🏆 TOP 20 High Sales Products (Completed Orders)
+                </h6>
 
                 {% if top_products and top_products|length > 0 %}
                 <div class="table-responsive">
@@ -257,120 +289,162 @@
                 </div>
                 {% else %}
                 <div class="alert alert-warning text-center">
-                    ⚠️ No completed product data available.
+                    ⚠️ No high sales product data available.
                 </div>
                 {% endif %}
             </div>
         </div>
+
+        <!-- 🐢 TOP 20 LEAST SALES -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-3">
+                    🐢 TOP 20 Least Sales Products (Completed Orders)
+                </h6>
+
+                {% if least_products and least_products|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Product Name</th>
+                                <th class="text-end">Total Quantity Sold</th>
+                                <th class="text-end">Total Revenue (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in least_products %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ product["Product Name"] }}</td>
+                                <td class="text-end">{{ product["Total Quantity Sold"] }}</td>
+                                <td class="text-end text-danger fw-semibold">
+                                    ₱ {{ "%.2f"|format(product["Total Revenue"]) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    ⚠️ No least sales product data available.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
+
 
 </div>
 
 <!-- ================= CHART SCRIPT ================= -->
 <script>
-Chart.register(ChartDataLabels);
+    Chart.register(ChartDataLabels);
 
-let barChart, pieChart, feeChart;
+    let barChart, pieChart, feeChart;
 
-function renderCharts() {
-    const incomeData = JSON.parse(
-        document.getElementById("income-data").textContent
-    );
+    function renderCharts() {
+        const incomeData = JSON.parse(
+            document.getElementById("income-data").textContent
+        );
 
-    const projected = incomeData["Projected Income"];
-    const actual = incomeData["Actual Received Income"];
-    const shopeeFee = projected - actual;
+        const projected = incomeData["Projected Income"];
+        const actual = incomeData["Actual Received Income"];
+        const shopeeFee = projected - actual;
 
-    if (barChart) barChart.destroy();
-    barChart = new Chart(incomeBarChart, {
-        type: "bar",
-        data: {
-            labels: ["Projected", "Actual", "Shopee Fee"],
-            datasets: [{
-                data: [projected, actual, shopeeFee],
-                backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                datalabels: {
-                    anchor: "end",
-                    align: "top",
-                    formatter: v =>
-                        ((v / projected) * 100).toFixed(1) + "%"
-                }
+        if (barChart) barChart.destroy();
+        barChart = new Chart(incomeBarChart, {
+            type: "bar",
+            data: {
+                labels: ["Projected", "Actual", "Shopee Fee"],
+                datasets: [{
+                    data: [projected, actual, shopeeFee],
+                    backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+                }]
             },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: "end",
+                        align: "top",
+                        formatter: v =>
+                            ((v / projected) * 100).toFixed(1) + "%"
+                    }
+                },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
 
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(incomePieChart, {
-        type: "pie",
-        data: {
-            labels: ["Projected", "Actual", "Shopee Fee"],
-            datasets: [{
-                data: [projected, actual, shopeeFee],
-                backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: "bottom" },
-                datalabels: {
-                    color: "#fff",
-                    formatter: (v, ctx) => {
-                        const total = ctx.chart.data.datasets[0].data
-                            .reduce((a,b)=>a+b,0);
-                        return ((v / total) * 100).toFixed(1) + "%";
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(incomePieChart, {
+            type: "pie",
+            data: {
+                labels: ["Projected", "Actual", "Shopee Fee"],
+                datasets: [{
+                    data: [projected, actual, shopeeFee],
+                    backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: "bottom" },
+                    datalabels: {
+                        color: "#fff",
+                        formatter: (v, ctx) => {
+                            const total = ctx.chart.data.datasets[0].data
+                                .reduce((a, b) => a + b, 0);
+                            return ((v / total) * 100).toFixed(1) + "%";
+                        }
                     }
                 }
             }
-        }
-    });
+        });
 
-    if (feeChart) feeChart.destroy();
-    feeChart = new Chart(feeBreakdownChart, {
-        type: "pie",
-        data: {
-            labels: ["AMS","Commission","Service","Support","Transaction","Tax"],
-            datasets: [{
-                data: [
-                    Math.abs(incomeData["AMS Commission Fee"]),
-                    Math.abs(incomeData["Commission Fee"]),
-                    Math.abs(incomeData["Service Fee"]),
-                    Math.abs(incomeData["Support Program Fee"]),
-                    Math.abs(incomeData["Transaction Fee"]),
-                    Math.abs(incomeData["Withholding Tax"])
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: "bottom" },
-                datalabels: {
-                    color: "#fff",
-                    formatter: (v, ctx) => {
-                        const total = ctx.chart.data.datasets[0].data
-                            .reduce((a,b)=>a+b,0);
-                        return ((v / total) * 100).toFixed(1) + "%";
+        if (feeChart) feeChart.destroy();
+        feeChart = new Chart(feeBreakdownChart, {
+            type: "pie",
+            data: {
+                labels: ["AMS", "Commission", "Service", "Support", "Transaction", "Tax"],
+                datasets: [{
+                    data: [
+                        Math.abs(incomeData["AMS Commission Fee"]),
+                        Math.abs(incomeData["Commission Fee"]),
+                        Math.abs(incomeData["Service Fee"]),
+                        Math.abs(incomeData["Support Program Fee"]),
+                        Math.abs(incomeData["Transaction Fee"]),
+                        Math.abs(incomeData["Withholding Tax"])
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: "bottom" },
+                    datalabels: {
+                        color: "#fff",
+                        formatter: (v, ctx) => {
+                            const total = ctx.chart.data.datasets[0].data
+                                .reduce((a, b) => a + b, 0);
+                            return ((v / total) * 100).toFixed(1) + "%";
+                        }
                     }
                 }
             }
-        }
-    });
-}
+        });
+    }
 
-document
-    .getElementById("graph-tab-btn")
-    .addEventListener("shown.bs.tab", renderCharts);
+    document
+        .getElementById("graph-tab-btn")
+        .addEventListener("shown.bs.tab", renderCharts);
 </script>
 
 <!-- ================= BACK BUTTON ================= -->
