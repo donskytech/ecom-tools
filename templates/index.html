@@ -13,9 +13,9 @@
                 </h5>
 
                 {% if error %}
-                    <div class="alert alert-danger small">
-                        {{ error }}
-                    </div>
+                <div class="alert alert-danger small">
+                    {{ error }}
+                </div>
                 {% endif %}
 
                 <form method="post" enctype="multipart/form-data">
@@ -24,22 +24,24 @@
                         <label class="form-label fw-semibold">
                             Orders File
                         </label>
-                        <input
-                            type="file"
-                            name="orders_file"
-                            class="form-control"
-                            required>
+                        <input type="file" name="orders_file" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
                             Income File
                         </label>
-                        <input
-                            type="file"
-                            name="income_file"
-                            class="form-control"
-                            required>
+                        <input type="file" name="income_file" class="form-control" required>
+                    </div>
+                    <!-- 👇 ADD THIS -->
+                    <!-- HOW-TO HELPER LINK (OPEN IN NEW TAB) -->
+                    <div class="text-center mb-3">
+                        <small class="text-muted">
+                            <a href="{{ url_for('main.how_to') }}" target="_blank" rel="noopener noreferrer"
+                                class="text-decoration-none">
+                                🔍 Click here to know how to export your Order and Income file
+                            </a>
+                        </small>
                     </div>
 
                     <button class="btn btn-primary w-100 mt-2">
