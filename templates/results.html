@@ -8,13 +8,10 @@
     position: relative;
     width: 100%;
     height: 260px;
-
-    /* ✅ Center charts horizontally & vertically */
     display: flex;
     justify-content: center;
     align-items: center;
 }
-
 @media (max-width: 768px) {
     .chart-container {
         height: 220px;
@@ -35,8 +32,16 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#graph-tab">
+        <button class="nav-link"
+                id="graph-tab-btn"
+                data-bs-toggle="tab"
+                data-bs-target="#graph-tab">
             📊 Income Graph Summary
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#product-tab">
+            🏆 Product Overview
         </button>
     </li>
 </ul>
@@ -69,7 +74,9 @@
                 <div class="card text-center shadow-sm border-danger">
                     <div class="card-body">
                         <div class="text-muted small">Missing Income Orders</div>
-                        <div class="fs-3 fw-bold text-danger">{{ recon_summary.missing_income_orders }}</div>
+                        <div class="fs-3 fw-bold text-danger">
+                            {{ recon_summary.missing_income_orders }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,17 +99,17 @@
                         <thead class="table-dark">
                             <tr>
                                 {% for key in missing_report[0].keys() %}
-                                    <th>{{ key }}</th>
+                                <th>{{ key }}</th>
                                 {% endfor %}
                             </tr>
                         </thead>
                         <tbody>
                             {% for row in missing_report %}
-                                <tr>
-                                    {% for value in row.values() %}
-                                        <td>{{ value }}</td>
-                                    {% endfor %}
-                                </tr>
+                            <tr>
+                                {% for value in row.values() %}
+                                <td>{{ value }}</td>
+                                {% endfor %}
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -119,7 +126,8 @@
     <!-- ================= TAB 2: INCOME SUMMARY ================= -->
     <div class="tab-pane fade" id="income-tab">
 
-        {% set shopee_fee = income_summary["Projected Income"] - income_summary["Actual Received Income"] %}
+        {% set shopee_fee = income_summary["Projected Income"]
+                            - income_summary["Actual Received Income"] %}
 
         <div class="row g-3 mb-4">
             <div class="col-md-4">
@@ -127,7 +135,9 @@
                     <div class="card-body">
                         <i class="bi bi-graph-up-arrow fs-2 text-primary"></i>
                         <div class="small text-muted mt-2">Projected Income</div>
-                        <div class="fs-4 fw-bold">₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}</div>
+                        <div class="fs-4 fw-bold">
+                            ₱ {{ "%.2f"|format(income_summary["Projected Income"]) }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -137,7 +147,9 @@
                     <div class="card-body">
                         <i class="bi bi-receipt-cutoff fs-2 text-danger"></i>
                         <div class="small text-muted mt-2">Shopee Fee</div>
-                        <div class="fs-4 fw-bold text-danger">-₱ {{ "%.2f"|format(shopee_fee) }}</div>
+                        <div class="fs-4 fw-bold text-danger">
+                            -₱ {{ "%.2f"|format(shopee_fee) }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -147,7 +159,9 @@
                     <div class="card-body">
                         <i class="bi bi-wallet2 fs-2 text-success"></i>
                         <div class="small text-muted mt-2">Actual Received Income</div>
-                        <div class="fs-4 fw-bold text-success">₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}</div>
+                        <div class="fs-4 fw-bold text-success">
+                            ₱ {{ "%.2f"|format(income_summary["Actual Received Income"]) }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -208,102 +222,155 @@
         </div>
     </div>
 
+    <!-- ================= TAB 4: PRODUCT OVERVIEW ================= -->
+    <div class="tab-pane fade" id="product-tab">
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h6 class="fw-semibold mb-3">🏆 Top 20 Products (Completed Orders)</h6>
+
+                {% if top_products and top_products|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Product Name</th>
+                                <th class="text-end">Total Quantity Sold</th>
+                                <th class="text-end">Total Revenue (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ product["Product Name"] }}</td>
+                                <td class="text-end">{{ product["Total Quantity Sold"] }}</td>
+                                <td class="text-end fw-semibold">
+                                    ₱ {{ "%.2f"|format(product["Total Revenue"]) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    ⚠️ No completed product data available.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- ================= CHART SCRIPT ================= -->
 <script>
 Chart.register(ChartDataLabels);
 
-const incomeData = JSON.parse(document.getElementById("income-data").textContent);
-const projected = incomeData["Projected Income"];
-const actual = incomeData["Actual Received Income"];
-const shopeeFee = projected - actual;
+let barChart, pieChart, feeChart;
 
-/* BAR CHART */
-new Chart(incomeBarChart, {
-    type: "bar",
-    data: {
-        labels: ["Projected", "Actual", "Shopee Fee"],
-        datasets: [{
-            data: [projected, actual, shopeeFee],
-            backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { top: 24 } },
-        plugins: {
-            legend: { display: false },
-            datalabels: {
-                anchor: "end",
-                align: "top",
-                offset: 4,
-                formatter: v => ((v / projected) * 100).toFixed(1) + "%",
-                font: { weight: "bold" }
-            }
+function renderCharts() {
+    const incomeData = JSON.parse(
+        document.getElementById("income-data").textContent
+    );
+
+    const projected = incomeData["Projected Income"];
+    const actual = incomeData["Actual Received Income"];
+    const shopeeFee = projected - actual;
+
+    if (barChart) barChart.destroy();
+    barChart = new Chart(incomeBarChart, {
+        type: "bar",
+        data: {
+            labels: ["Projected", "Actual", "Shopee Fee"],
+            datasets: [{
+                data: [projected, actual, shopeeFee],
+                backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+            }]
         },
-        scales: { y: { beginAtZero: true } }
-    }
-});
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: "end",
+                    align: "top",
+                    formatter: v =>
+                        ((v / projected) * 100).toFixed(1) + "%"
+                }
+            },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
 
-/* PIE: INCOME DISTRIBUTION */
-new Chart(incomePieChart, {
-    type: "pie",
-    data: {
-        labels: ["Projected", "Actual", "Shopee Fee"],
-        datasets: [{
-            data: [projected, actual, shopeeFee],
-            backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: "bottom", align: "center" },
-            datalabels: {
-                color: "#fff",
-                formatter: (v, ctx) => {
-                    const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                    return ((v / total) * 100).toFixed(1) + "%";
+    if (pieChart) pieChart.destroy();
+    pieChart = new Chart(incomePieChart, {
+        type: "pie",
+        data: {
+            labels: ["Projected", "Actual", "Shopee Fee"],
+            datasets: [{
+                data: [projected, actual, shopeeFee],
+                backgroundColor: ["#0d6efd", "#198754", "#dc3545"]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "bottom" },
+                datalabels: {
+                    color: "#fff",
+                    formatter: (v, ctx) => {
+                        const total = ctx.chart.data.datasets[0].data
+                            .reduce((a,b)=>a+b,0);
+                        return ((v / total) * 100).toFixed(1) + "%";
+                    }
                 }
             }
         }
-    }
-});
+    });
 
-/* PIE: FEE BREAKDOWN */
-new Chart(feeBreakdownChart, {
-    type: "pie",
-    data: {
-        labels: ["AMS", "Commission", "Service", "Support", "Transaction", "Tax"],
-        datasets: [{
-            data: [
-                Math.abs(incomeData["AMS Commission Fee"]),
-                Math.abs(incomeData["Commission Fee"]),
-                Math.abs(incomeData["Service Fee"]),
-                Math.abs(incomeData["Support Program Fee"]),
-                Math.abs(incomeData["Transaction Fee"]),
-                Math.abs(incomeData["Withholding Tax"])
-            ]
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: "bottom", align: "center" },
-            datalabels: {
-                color: "#fff",
-                formatter: (v, ctx) => {
-                    const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                    return ((v / total) * 100).toFixed(1) + "%";
+    if (feeChart) feeChart.destroy();
+    feeChart = new Chart(feeBreakdownChart, {
+        type: "pie",
+        data: {
+            labels: ["AMS","Commission","Service","Support","Transaction","Tax"],
+            datasets: [{
+                data: [
+                    Math.abs(incomeData["AMS Commission Fee"]),
+                    Math.abs(incomeData["Commission Fee"]),
+                    Math.abs(incomeData["Service Fee"]),
+                    Math.abs(incomeData["Support Program Fee"]),
+                    Math.abs(incomeData["Transaction Fee"]),
+                    Math.abs(incomeData["Withholding Tax"])
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "bottom" },
+                datalabels: {
+                    color: "#fff",
+                    formatter: (v, ctx) => {
+                        const total = ctx.chart.data.datasets[0].data
+                            .reduce((a,b)=>a+b,0);
+                        return ((v / total) * 100).toFixed(1) + "%";
+                    }
                 }
             }
         }
-    }
-});
+    });
+}
+
+document
+    .getElementById("graph-tab-btn")
+    .addEventListener("shown.bs.tab", renderCharts);
 </script>
 
 <!-- ================= BACK BUTTON ================= -->

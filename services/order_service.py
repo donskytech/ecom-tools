@@ -51,13 +51,9 @@ class OrderService:
         }
 
     # --------------------------------------------------
-    # 💰 PROJECTED INCOME (NEW FEATURE)
+    # 💰 PROJECTED INCOME
     # --------------------------------------------------
     def get_projected_income_total(self) -> float:
-        """
-        Sum of 'Product Subtotal' for all completed orders.
-        Represents projected gross income.
-        """
         completed = self.get_completed_orders()
 
         if "Product Subtotal" not in completed.columns:
@@ -65,10 +61,60 @@ class OrderService:
                 "❌ 'Product Subtotal' column not found in orders file"
             )
 
-        # Convert values safely to numeric
         subtotals = pd.to_numeric(
             completed["Product Subtotal"],
             errors="coerce"
         ).fillna(0)
 
         return float(subtotals.sum())
+
+    # --------------------------------------------------
+    # 🏆 TOP 20 PRODUCTS (SORTED BY TOTAL REVENUE)
+    # --------------------------------------------------
+    def get_top_20_products_completed(self) -> list[dict]:
+        """
+        Returns Top 20 products from COMPLETED orders,
+        sorted by TOTAL REVENUE (highest first).
+        """
+        completed = self.get_completed_orders()
+
+        required_cols = {"Product Name", "Quantity", "Product Subtotal"}
+        if not required_cols.issubset(completed.columns):
+            missing = required_cols - set(completed.columns)
+            raise ValueError(
+                f"❌ Missing required columns: {', '.join(missing)}"
+            )
+
+        completed = completed.copy()
+
+        completed["Quantity"] = pd.to_numeric(
+            completed["Quantity"],
+            errors="coerce"
+        ).fillna(0)
+
+        completed["Product Subtotal"] = pd.to_numeric(
+            completed["Product Subtotal"],
+            errors="coerce"
+        ).fillna(0)
+
+        grouped = (
+            completed
+            .groupby("Product Name", dropna=False)
+            .agg(
+                total_quantity=("Quantity", "sum"),
+                total_revenue=("Product Subtotal", "sum")
+            )
+            .reset_index()
+            # 🔥 SORT BY REVENUE INSTEAD OF QUANTITY
+            .sort_values("total_revenue", ascending=False)
+            .head(20)
+        )
+
+        return [
+            {
+                "Product Name": row["Product Name"],
+                "Total Quantity Sold": int(row["total_quantity"]),
+                "Total Revenue": float(row["total_revenue"]),
+            }
+            for _, row in grouped.iterrows()
+        ]
