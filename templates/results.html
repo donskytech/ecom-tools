@@ -42,6 +42,12 @@
             🏆 Product Overview
         </button>
     </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#refund-tab">
+            🔄 Return / Refund
+        </button>
+    </li>
+
 </ul>
 
 <div class="tab-content">
@@ -334,6 +340,86 @@
                 {% endif %}
             </div>
         </div>
+
+    </div>
+    <!-- ================= TAB: RETURN / REFUND ================= -->
+    <div class="tab-pane fade" id="refund-tab">
+
+        <!-- SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <div class="text-muted small">Return / Refund Count</div>
+                        <div class="fs-3 fw-bold text-danger">
+                            {{ refund_summary["Return/Refund Count"] }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm border-danger">
+                    <div class="card-body">
+                        <div class="text-muted small">Total Revenue Loss</div>
+                        <div class="fs-4 fw-bold text-danger">
+                            ₱ {{ "%.2f"|format(refund_summary["Total Revenue Loss"]) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm border-warning">
+                    <div class="card-body">
+                        <div class="text-muted small">
+                            Reverse Shipping Fee Charged to Seller
+                        </div>
+                        <div class="fs-4 fw-bold text-warning">
+                            ₱ {{ "%.2f"|format(
+                            refund_summary["Reverse Shipping Fee Charged to Seller"]
+                            ) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- DETAILS TABLE -->
+        {% if refund_details and refund_details|length > 0 %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-3">🔍 Return / Refund Details</h6>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                {% for key in refund_details[0].keys() %}
+                                <th>{{ key }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in refund_details %}
+                            <tr>
+                                {% for value in row.values() %}
+                                <td>{{ value }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-success text-center">
+            ✅ No return or refund records found!
+        </div>
+        {% endif %}
 
     </div>
 

@@ -20,9 +20,13 @@ class IncomeService:
     # LOAD & PREPARE INCOME DATA
     # --------------------------------------------------
     def load_income_data(self):
+        if self.income_df is not None:
+            return
+
         excel = pd.ExcelFile(self.source)
         sheet_names = excel.sheet_names
 
+        # Prefer explicit Income sheet if present
         sheet_name = "Income" if "Income" in sheet_names else sheet_names[0]
 
         preview = pd.read_excel(
@@ -33,7 +37,6 @@ class IncomeService:
         )
 
         header_row = self._detect_header_row(preview)
-
         if header_row is None:
             raise ValueError("❌ Could not detect header row in Income sheet")
 
@@ -43,6 +46,7 @@ class IncomeService:
             header=header_row
         )
 
+        # Normalize column names
         self.income_df.columns = (
             self.income_df.columns
             .astype(str)
@@ -51,7 +55,6 @@ class IncomeService:
         )
 
         self.order_id_column = self._detect_order_id_column()
-
         if self.order_id_column is None:
             raise ValueError(
                 f"❌ Order ID column not found. Columns: {list(self.income_df.columns)}"
@@ -112,7 +115,7 @@ class IncomeService:
         ]
 
     # --------------------------------------------------
-    # 📦 RECONCILIATION SUMMARY (RESTORED)
+    # 📦 RECONCILIATION SUMMARY
     # --------------------------------------------------
     def get_reconciliation_summary(self) -> dict:
         completed_ids = set(
@@ -137,9 +140,9 @@ class IncomeService:
         if self.income_df is None:
             self.load_income_data()
 
-        completed_orders = self.order_service.get_completed_orders()
         completed_ids = set(
-            completed_orders["Order ID"]
+            self.order_service
+            .get_completed_orders()["Order ID"]
             .astype(str)
             .str.strip()
         )
@@ -153,28 +156,133 @@ class IncomeService:
 
         projected_income = self.order_service.get_projected_income_total()
 
-        ams_commission_fee = self._safe_sum(matched_income, "ams commission fee")
-        commission_fee = self._safe_sum(matched_income, "commission fee")
-        service_fee = self._safe_sum(matched_income, "service fee")
-        support_program_fee = self._safe_sum(matched_income, "support program fee")
-        transaction_fee = self._safe_sum(matched_income, "transaction fee")
-        withholding_tax = self._safe_sum(matched_income, "withholding tax")
-        total_released_amount = self._safe_sum(
-            matched_income,
-            "total released amount (₱)"
+        return {
+            "Projected Income": projected_income,
+            "Actual Received Income": self._safe_sum(
+                matched_income, "total released amount (₱)"
+            ),
+            "AMS Commission Fee": self._safe_sum(
+                matched_income, "ams commission fee"
+            ),
+            "Commission Fee": self._safe_sum(
+                matched_income, "commission fee"
+            ),
+            "Service Fee": self._safe_sum(
+                matched_income, "service fee"
+            ),
+            "Support Program Fee": self._safe_sum(
+                matched_income, "support program fee"
+            ),
+            "Transaction Fee": self._safe_sum(
+                matched_income, "transaction fee"
+            ),
+            "Withholding Tax": self._safe_sum(
+                matched_income, "withholding tax"
+            ),
+            "Total Released Amount (₱)": self._safe_sum(
+                matched_income, "total released amount (₱)"
+            ),
+        }
+
+    # --------------------------------------------------
+    # 🔄 RETURN / REFUND SUMMARY
+    # --------------------------------------------------
+    def get_return_refund_summary(self) -> dict:
+        if self.income_df is None:
+            self.load_income_data()
+
+        completed_ids = set(
+            self.order_service
+            .get_completed_orders()["Order ID"]
+            .astype(str)
+            .str.strip()
+        )
+
+        refunded = self.income_df[
+            (self.income_df[self.order_id_column]
+             .astype(str)
+             .str.strip()
+             .isin(completed_ids)) &
+            (self.income_df.get("refund id").notna()) &
+            (self.income_df["refund id"].astype(str).str.strip() != "")
+        ]
+
+        refund_amount = self._safe_sum(refunded, "refund amount")
+        reverse_shipping_fee = self._safe_sum(
+            refunded, "reverse shipping fee"
         )
 
         return {
-            "Projected Income": projected_income,
-            "Actual Received Income": total_released_amount,
-            "AMS Commission Fee": ams_commission_fee,
-            "Commission Fee": commission_fee,
-            "Service Fee": service_fee,
-            "Support Program Fee": support_program_fee,
-            "Transaction Fee": transaction_fee,
-            "Withholding Tax": withholding_tax,
-            "Total Released Amount (₱)": total_released_amount,
+            "Return/Refund Count": len(refunded),
+            "Total Revenue Loss": abs(refund_amount),
+            "Reverse Shipping Fee Charged to Seller": abs(reverse_shipping_fee),
         }
+
+    # --------------------------------------------------
+    # 🔄 RETURN / REFUND DETAILS (CLEAN SELLER VIEW)
+    # --------------------------------------------------
+    def get_return_refund_details(self) -> pd.DataFrame:
+        if self.income_df is None:
+            self.load_income_data()
+
+        completed_ids = set(
+            self.order_service
+            .get_completed_orders()["Order ID"]
+            .astype(str)
+            .str.strip()
+        )
+
+        refunded = self.income_df[
+            (self.income_df[self.order_id_column]
+             .astype(str)
+             .str.strip()
+             .isin(completed_ids)) &
+            (self.income_df.get("refund id").notna()) &
+            (self.income_df["refund id"].astype(str).str.strip() != "")
+        ].copy()
+
+        column_map = {
+            self.order_id_column: "Order ID",
+            "refund id": "Refund ID",
+            "username (buyer)": "Username (Buyer)",
+            "order creation date": "Order Creation Date",
+            "refund amount": "Refund Amount",
+            "shipping fee rebate from shopee": "Shipping Fee Rebate From Shopee",
+            "3rd party logistics - defined shipping fee": "3rd Party Logistics - Defined Shipping Fee",
+            "reverse shipping fee": "Reverse Shipping Fee",
+            "total released amount (₱)": "Total Released Amount (₱)",
+            "cash refund to buyer amount": "Cash Refund to Buyer Amount",
+        }
+
+        existing_cols = {
+            col: label
+            for col, label in column_map.items()
+            if col in refunded.columns
+        }
+
+        cleaned = refunded[list(existing_cols.keys())].rename(
+            columns=existing_cols
+        )
+
+        # Clean numeric fields → absolute values
+        numeric_fields = [
+            "Refund Amount",
+            "Shipping Fee Rebate From Shopee",
+            "3rd Party Logistics - Defined Shipping Fee",
+            "Reverse Shipping Fee",
+            "Total Released Amount (₱)",
+            "Cash Refund to Buyer Amount",
+        ]
+
+        for col in numeric_fields:
+            if col in cleaned.columns:
+                cleaned[col] = (
+                    pd.to_numeric(cleaned[col], errors="coerce")
+                    .fillna(0)
+                    .abs()
+                )
+
+        return cleaned
 
     # --------------------------------------------------
     # 📤 EXPORT
@@ -224,5 +332,4 @@ class IncomeService:
 
         report = missing[cols].rename(columns=rename)
 
-        # Clean NaN → blank
         return report.fillna("")

@@ -5,7 +5,6 @@ from services.income_service import IncomeService
 
 main_bp = Blueprint("main", __name__)
 
-# Simple in-memory cache for Excel download
 _cached_excel = None
 
 
@@ -23,35 +22,28 @@ def index():
                 error="Please upload both Orders and Income files."
             )
 
-        # Read uploaded files into memory (BytesIO)
         orders_bytes = BytesIO(orders_file.read())
         income_bytes = BytesIO(income_file.read())
 
-        # Initialize services
         order_service = OrderService(orders_bytes)
         income_service = IncomeService(income_bytes, order_service)
 
-        # --------------------------------------------------
-        # CORE SUMMARIES
-        # --------------------------------------------------
+        # Core summaries
         order_summary = order_service.get_summary()
         recon_summary = income_service.get_reconciliation_summary()
 
-        # --------------------------------------------------
-        # REPORTS
-        # --------------------------------------------------
+        # Reports
         missing_report_df = income_service.get_missing_income_report()
         income_summary = income_service.get_actual_received_income_summary()
 
-        # --------------------------------------------------
-        # 🏆 PRODUCT OVERVIEW DATA
-        # --------------------------------------------------
+        # Product Overview
         top_products = order_service.get_top_20_products_completed()
         least_products = order_service.get_bottom_20_products_completed()
 
-        # --------------------------------------------------
-        # CACHE EXCEL FOR DOWNLOAD
-        # --------------------------------------------------
+        # 🔄 Return / Refund
+        refund_summary = income_service.get_return_refund_summary()
+        refund_details_df = income_service.get_return_refund_details()
+
         _cached_excel = income_service.export_missing_orders_to_excel()
 
         return render_template(
@@ -60,12 +52,13 @@ def index():
             recon_summary=recon_summary,
             missing_report=missing_report_df.to_dict(orient="records"),
             income_summary=income_summary,
-            top_products=top_products,        # 🔥 High sales
-            least_products=least_products,    # 🐢 Low sales
+            top_products=top_products,
+            least_products=least_products,
+            refund_summary=refund_summary,
+            refund_details=refund_details_df.to_dict(orient="records"),
             can_download=len(missing_report_df) > 0
         )
 
-    # GET request
     return render_template("index.html")
 
 
