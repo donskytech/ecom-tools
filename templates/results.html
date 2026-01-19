@@ -428,39 +428,117 @@
 
     </div>
     <!-- ================= TAB: SHIPPING OVERCHARGE ================= -->
+
+    <!-- ================= TAB: SHIPPING OVERCHARGE ================= -->
     <div class="tab-pane fade" id="shipping-tab">
 
+        {% set overcharged_rows = [] %}
+        {% set total_overcharge = namespace(value=0) %}
+
+        {% for row in shipping_overcharge %}
+        {% if "Overcharged" in row["Shipping Status"] %}
+        {% set _ = overcharged_rows.append(row) %}
+        {% set diff =
+        row["3rd Party Logistics - Defined Shipping Fee"]
+        - (row["Buyer Paid Shipping Fee"]
+        + row["Shipping Fee Rebate From Shopee"]) %}
+        {% set total_overcharge.value = total_overcharge.value + diff %}
+        {% endif %}
+        {% endfor %}
+
+        <!-- 🔴 SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-md-6">
+                <div class="card text-center shadow-sm border-danger">
+                    <div class="card-body">
+                        <div class="text-muted small">Overcharged Orders</div>
+                        <div class="fs-3 fw-bold text-danger">
+                            {{ overcharged_rows | length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card text-center shadow-sm border-danger">
+                    <div class="card-body">
+                        <div class="text-muted small d-flex justify-content-center align-items-center gap-1">
+                            <i class="bi bi-cash-coin text-danger"></i>
+                            Total Overcharged Amount
+                        </div>
+                        <div class="fs-4 fw-bold text-danger mt-1">
+                            ₱ {{ "%.2f"|format(total_overcharge.value) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- 📋 TABLE -->
         <div class="card shadow-sm">
             <div class="card-body">
 
                 <h6 class="fw-semibold mb-3">
-                    🚚 Top 50 Orders with Highest Shipping Fees
+                    🚚 Shipping Overcharge Check (Completed Orders)
                 </h6>
 
-                {% if overcharge_shipping and overcharge_shipping|length > 0 %}
+                {% if shipping_overcharge and shipping_overcharge|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered align-middle">
                         <thead class="table-dark">
                             <tr>
-                                {% for key in overcharge_shipping[0].keys() %}
-                                <th>{{ key }}</th>
-                                {% endfor %}
+                                <th>Status</th>
+                                <th>Order ID</th>
+                                <th>Username (Buyer)</th>
+                                <th class="text-end">Buyer Paid Shipping Fee</th>
+                                <th class="text-end">Shipping Fee Rebate From Shopee</th>
+                                <th class="text-end">
+                                    3rd Party Logistics - Defined Shipping Fee
+                                </th>
+                                <th class="text-end">Overcharged Amount (₱)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for row in overcharge_shipping %}
-                            <tr>
-                                {% for value in row.values() %}
-                                <td>{{ value }}</td>
-                                {% endfor %}
+                            {% for row in shipping_overcharge %}
+
+                            {% set overcharge =
+                            row["3rd Party Logistics - Defined Shipping Fee"]
+                            - (row["Buyer Paid Shipping Fee"]
+                            + row["Shipping Fee Rebate From Shopee"]) %}
+
+                            <tr class="{% if 'Overcharged' in row['Shipping Status'] %}table-danger{% endif %}">
+                                <td class="fw-bold text-center">
+                                    {{ row["Shipping Status"] }}
+                                </td>
+                                <td>{{ row["Order ID"] }}</td>
+                                <td>{{ row["Username (Buyer)"] }}</td>
+                                <td class="text-end">
+                                    ₱ {{ "%.2f"|format(row["Buyer Paid Shipping Fee"]) }}
+                                </td>
+                                <td class="text-end">
+                                    ₱ {{ "%.2f"|format(row["Shipping Fee Rebate From Shopee"]) }}
+                                </td>
+                                <td class="text-end fw-semibold">
+                                    ₱ {{ "%.2f"|format(
+                                    row["3rd Party Logistics - Defined Shipping Fee"]
+                                    ) }}
+                                </td>
+                                <td class="text-end fw-bold
+                                {% if overcharge > 0 %}text-danger{% endif %}">
+                                    ₱ {{ "%.2f"|format(overcharge if overcharge > 0 else 0) }}
+                                </td>
                             </tr>
+
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
                 <div class="alert alert-success text-center">
-                    ✅ No overcharge shipping records found.
+                    ✅ No shipping overcharge detected.
                 </div>
                 {% endif %}
 
@@ -468,6 +546,8 @@
         </div>
 
     </div>
+
+
 
 
 </div>

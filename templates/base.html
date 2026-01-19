@@ -74,6 +74,52 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- ================= FOOTER ================= -->
+    <footer class="mt-5 border-top bg-light">
+        <div class="container py-4">
+            <div class="row gy-3">
+
+                <!-- LEFT: BRAND -->
+                <div class="col-md-6">
+                    <h6 class="fw-semibold mb-1">
+                        🛒 ecom-tools
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Simple reconciliation & analytics tools for online sellers.
+                    </p>
+                    <p class="small text-muted">
+                        Built to help sellers understand income, fees, refunds, and shipping charges.
+                    </p>
+                </div>
+
+                <!-- RIGHT: LINKS -->
+                <div class="col-md-3">
+                    <h6 class="fw-semibold mb-2">Product</h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li><a href="/" class="text-decoration-none text-muted">Home</a></li>
+                        <li><a href="/how-to" target="_blank" class="text-decoration-none text-muted">How To</a></li>
+                        <li><a href="/about" class="text-decoration-none text-muted">About</a></li>
+                    </ul>
+                </div>
+
+                <!-- DISCLAIMER -->
+                <div class="col-md-3">
+                    <h6 class="fw-semibold mb-2">Disclaimer</h6>
+                    <p class="small text-muted mb-0">
+                        This tool is for informational purposes only.
+                        Please verify all figures with your platform’s official reports.
+                    </p>
+                </div>
+
+            </div>
+
+            <hr class="my-3">
+
+            <div class="text-center small text-muted">
+                © {{ current_year if current_year else "2026" }} ecom-tools · All rights reserved
+            </div>
+        </div>
+    </footer>
 
 </body>
 

@@ -151,6 +151,7 @@ def index():
         # CACHE EXCEL FOR DOWNLOAD
         # --------------------------------------------------
         _cached_excel = income_service.export_missing_orders_to_excel()
+        shipping_overcharge = income_service.get_shipping_overcharge_status()
 
         return render_template(
             "results.html",
@@ -163,7 +164,8 @@ def index():
             top_products=top_products.to_dict(orient="records"),
             least_products=least_products.to_dict(orient="records"),
             overcharge_shipping=overcharge_shipping_df.to_dict(orient="records"),
-            can_download=len(missing_report_df) > 0
+            can_download=len(missing_report_df) > 0,
+            shipping_overcharge=shipping_overcharge.to_dict(orient="records"),
         )
 
     # --------------------------------------------------

@@ -367,3 +367,82 @@ class IncomeService:
 
         report = missing[cols].rename(columns=rename)
         return report.fillna("")
+
+
+    # --------------------------------------------------
+    # 🚚 SHIPPING OVERCHARGE STATUS (INCREMENTAL ADD)
+    # --------------------------------------------------
+    def get_shipping_overcharge_status(self, limit: int = 50) -> pd.DataFrame:
+        """
+        Compare shipping fee components and detect possible overcharge
+        for COMPLETED orders only.
+        """
+        # Ensure income data is loaded
+        if self.income_df is None:
+            self.load_income_data()
+
+        # Get completed Order IDs from OrderService
+        completed_ids = set(
+            self.order_service
+            .get_completed_orders()["Order ID"]
+            .astype(str)
+            .str.strip()
+        )
+
+        # Match only completed orders in income file
+        df = self.income_df[
+            self.income_df[self.order_id_column]
+            .astype(str)
+            .str.strip()
+            .isin(completed_ids)
+        ].copy()
+
+        # Columns we care about
+        column_map = {
+            self.order_id_column: "Order ID",
+            "username (buyer)": "Username (Buyer)",
+            "buyer paid shipping fee": "Buyer Paid Shipping Fee",
+            "shipping fee rebate from shopee":
+                "Shipping Fee Rebate From Shopee",
+            "3rd party logistics - defined shipping fee":
+                "3rd Party Logistics - Defined Shipping Fee",
+        }
+
+        existing = {k: v for k, v in column_map.items() if k in df.columns}
+        df = df[list(existing.keys())].rename(columns=existing)
+
+        # Convert numeric columns safely
+        for col in [
+            "Buyer Paid Shipping Fee",
+            "Shipping Fee Rebate From Shopee",
+            "3rd Party Logistics - Defined Shipping Fee",
+        ]:
+            if col in df.columns:
+                df[col] = (
+                    pd.to_numeric(df[col], errors="coerce")
+                    .fillna(0)
+                    .abs()
+                )
+
+        # Calculate comparison
+        df["Calculated Shipping Total"] = (
+            df["Buyer Paid Shipping Fee"]
+            + df["Shipping Fee Rebate From Shopee"]
+        )
+
+        df["Shipping Status"] = df.apply(
+            lambda r: "❌ Overcharged"
+            if round(r["Calculated Shipping Total"], 2)
+            != round(r["3rd Party Logistics - Defined Shipping Fee"], 2)
+            else "✔ OK",
+            axis=1
+        )
+
+        return (
+            df.sort_values(
+                by="3rd Party Logistics - Defined Shipping Fee",
+                ascending=False
+            )
+            .head(limit)
+            .reset_index(drop=True)
+        )
