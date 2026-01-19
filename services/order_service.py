@@ -15,9 +15,12 @@ class OrderService:
     # LOAD & PREPARE ORDER DATA
     # --------------------------------------------------
     def load_data(self):
+        if self.df is not None:
+            return
+
         self.df = pd.read_excel(self.source)
 
-        # Normalize column names
+        # Normalize column names (trim spaces only, keep case)
         self.df.columns = (
             self.df.columns
             .astype(str)
@@ -56,6 +59,11 @@ class OrderService:
     def get_projected_income_total(self) -> float:
         completed = self.get_completed_orders()
 
+        if "Product Subtotal" not in completed.columns:
+            raise ValueError(
+                "❌ 'Product Subtotal' column not found in orders file"
+            )
+
         subtotals = pd.to_numeric(
             completed["Product Subtotal"],
             errors="coerce"
@@ -64,69 +72,91 @@ class OrderService:
         return float(subtotals.sum())
 
     # --------------------------------------------------
-    # 🏆 TOP 20 HIGH SALES PRODUCTS (BY REVENUE)
+    # 📦 TOP 20 HIGH SALES PRODUCTS (COMPLETED)
     # --------------------------------------------------
-    def get_top_20_products_completed(self) -> list[dict]:
-        """
-        Highest revenue products (Completed Orders)
-        """
-        return self._aggregate_products(
-            ascending=False
-        )
-
-    # --------------------------------------------------
-    # 🐢 TOP 20 LEAST SALES PRODUCTS (BY REVENUE)
-    # --------------------------------------------------
-    def get_bottom_20_products_completed(self) -> list[dict]:
-        """
-        Lowest revenue products (Completed Orders)
-        """
-        return self._aggregate_products(
-            ascending=True
-        )
-
-    # --------------------------------------------------
-    # INTERNAL AGGREGATION LOGIC
-    # --------------------------------------------------
-    def _aggregate_products(self, ascending: bool) -> list[dict]:
+    def get_top_20_products_completed(self) -> pd.DataFrame:
         completed = self.get_completed_orders()
 
-        required_cols = {"Product Name", "Quantity", "Product Subtotal"}
-        if not required_cols.issubset(completed.columns):
-            missing = required_cols - set(completed.columns)
-            raise ValueError(
-                f"❌ Missing required columns: {', '.join(missing)}"
-            )
+        required_columns = [
+            "Product Name",
+            "Quantity",
+            "Product Subtotal",
+        ]
 
-        completed = completed.copy()
+        for col in required_columns:
+            if col not in completed.columns:
+                raise ValueError(f"❌ Missing column: {col}")
 
         completed["Quantity"] = pd.to_numeric(
-            completed["Quantity"],
-            errors="coerce"
+            completed["Quantity"], errors="coerce"
         ).fillna(0)
 
         completed["Product Subtotal"] = pd.to_numeric(
-            completed["Product Subtotal"],
-            errors="coerce"
+            completed["Product Subtotal"], errors="coerce"
         ).fillna(0)
 
         grouped = (
             completed
-            .groupby("Product Name", dropna=False)
-            .agg(
-                total_quantity=("Quantity", "sum"),
-                total_revenue=("Product Subtotal", "sum")
-            )
-            .reset_index()
-            .sort_values("total_revenue", ascending=ascending)
-            .head(20)
+            .groupby("Product Name", as_index=False)
+            .agg({
+                "Quantity": "sum",
+                "Product Subtotal": "sum"
+            })
         )
 
-        return [
-            {
-                "Product Name": row["Product Name"],
-                "Total Quantity Sold": int(row["total_quantity"]),
-                "Total Revenue": float(row["total_revenue"]),
-            }
-            for _, row in grouped.iterrows()
+        grouped.rename(columns={
+            "Quantity": "Total Quantity Sold",
+            "Product Subtotal": "Total Revenue"
+        }, inplace=True)
+
+        return (
+            grouped
+            .sort_values("Total Revenue", ascending=False)
+            .head(20)
+            .reset_index(drop=True)
+        )
+
+    # --------------------------------------------------
+    # 📉 TOP 20 LEAST SALES PRODUCTS (COMPLETED)
+    # --------------------------------------------------
+    def get_top_20_least_products_completed(self) -> pd.DataFrame:
+        completed = self.get_completed_orders()
+
+        required_columns = [
+            "Product Name",
+            "Quantity",
+            "Product Subtotal",
         ]
+
+        for col in required_columns:
+            if col not in completed.columns:
+                raise ValueError(f"❌ Missing column: {col}")
+
+        completed["Quantity"] = pd.to_numeric(
+            completed["Quantity"], errors="coerce"
+        ).fillna(0)
+
+        completed["Product Subtotal"] = pd.to_numeric(
+            completed["Product Subtotal"], errors="coerce"
+        ).fillna(0)
+
+        grouped = (
+            completed
+            .groupby("Product Name", as_index=False)
+            .agg({
+                "Quantity": "sum",
+                "Product Subtotal": "sum"
+            })
+        )
+
+        grouped.rename(columns={
+            "Quantity": "Total Quantity Sold",
+            "Product Subtotal": "Total Revenue"
+        }, inplace=True)
+
+        return (
+            grouped
+            .sort_values("Total Revenue", ascending=True)
+            .head(20)
+            .reset_index(drop=True)
+        )

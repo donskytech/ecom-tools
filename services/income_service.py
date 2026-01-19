@@ -26,7 +26,7 @@ class IncomeService:
         excel = pd.ExcelFile(self.source)
         sheet_names = excel.sheet_names
 
-        # Prefer explicit Income sheet if present
+        # Prefer Income sheet if present
         sheet_name = "Income" if "Income" in sheet_names else sheet_names[0]
 
         preview = pd.read_excel(
@@ -62,7 +62,6 @@ class IncomeService:
 
     def _detect_header_row(self, preview_df: pd.DataFrame) -> Optional[int]:
         keywords = ["order id", "order no", "order number", "ordersn"]
-
         for idx, row in preview_df.iterrows():
             values = row.astype(str).str.lower()
             if any(any(k in v for k in keywords) for v in values):
@@ -71,7 +70,6 @@ class IncomeService:
 
     def _detect_order_id_column(self) -> Optional[str]:
         candidates = ["order id", "order no", "order number", "ordersn"]
-
         for col in self.income_df.columns:
             for key in candidates:
                 if key in col:
@@ -82,7 +80,6 @@ class IncomeService:
         col = column_name.lower()
         if col not in df.columns:
             return 0.0
-
         return float(
             pd.to_numeric(df[col], errors="coerce")
             .fillna(0)
@@ -115,7 +112,7 @@ class IncomeService:
         ]
 
     # --------------------------------------------------
-    # 📦 RECONCILIATION SUMMARY
+    # 📦 RECONCILIATION SUMMARY (RESTORED)
     # --------------------------------------------------
     def get_reconciliation_summary(self) -> dict:
         completed_ids = set(
@@ -147,7 +144,7 @@ class IncomeService:
             .str.strip()
         )
 
-        matched_income = self.income_df[
+        matched = self.income_df[
             self.income_df[self.order_id_column]
             .astype(str)
             .str.strip()
@@ -159,28 +156,16 @@ class IncomeService:
         return {
             "Projected Income": projected_income,
             "Actual Received Income": self._safe_sum(
-                matched_income, "total released amount (₱)"
+                matched, "total released amount (₱)"
             ),
-            "AMS Commission Fee": self._safe_sum(
-                matched_income, "ams commission fee"
-            ),
-            "Commission Fee": self._safe_sum(
-                matched_income, "commission fee"
-            ),
-            "Service Fee": self._safe_sum(
-                matched_income, "service fee"
-            ),
-            "Support Program Fee": self._safe_sum(
-                matched_income, "support program fee"
-            ),
-            "Transaction Fee": self._safe_sum(
-                matched_income, "transaction fee"
-            ),
-            "Withholding Tax": self._safe_sum(
-                matched_income, "withholding tax"
-            ),
+            "AMS Commission Fee": self._safe_sum(matched, "ams commission fee"),
+            "Commission Fee": self._safe_sum(matched, "commission fee"),
+            "Service Fee": self._safe_sum(matched, "service fee"),
+            "Support Program Fee": self._safe_sum(matched, "support program fee"),
+            "Transaction Fee": self._safe_sum(matched, "transaction fee"),
+            "Withholding Tax": self._safe_sum(matched, "withholding tax"),
             "Total Released Amount (₱)": self._safe_sum(
-                matched_income, "total released amount (₱)"
+                matched, "total released amount (₱)"
             ),
         }
 
@@ -219,7 +204,7 @@ class IncomeService:
         }
 
     # --------------------------------------------------
-    # 🔄 RETURN / REFUND DETAILS (CLEAN SELLER VIEW)
+    # 🔄 RETURN / REFUND DETAILS (CLEAN VIEW)
     # --------------------------------------------------
     def get_return_refund_details(self) -> pd.DataFrame:
         if self.income_df is None:
@@ -247,25 +232,22 @@ class IncomeService:
             "username (buyer)": "Username (Buyer)",
             "order creation date": "Order Creation Date",
             "refund amount": "Refund Amount",
-            "shipping fee rebate from shopee": "Shipping Fee Rebate From Shopee",
-            "3rd party logistics - defined shipping fee": "3rd Party Logistics - Defined Shipping Fee",
+            "shipping fee rebate from shopee":
+                "Shipping Fee Rebate From Shopee",
+            "3rd party logistics - defined shipping fee":
+                "3rd Party Logistics - Defined Shipping Fee",
             "reverse shipping fee": "Reverse Shipping Fee",
             "total released amount (₱)": "Total Released Amount (₱)",
             "cash refund to buyer amount": "Cash Refund to Buyer Amount",
         }
 
-        existing_cols = {
-            col: label
-            for col, label in column_map.items()
-            if col in refunded.columns
+        existing = {
+            c: l for c, l in column_map.items() if c in refunded.columns
         }
 
-        cleaned = refunded[list(existing_cols.keys())].rename(
-            columns=existing_cols
-        )
+        cleaned = refunded[list(existing.keys())].rename(columns=existing)
 
-        # Clean numeric fields → absolute values
-        numeric_fields = [
+        numeric_cols = [
             "Refund Amount",
             "Shipping Fee Rebate From Shopee",
             "3rd Party Logistics - Defined Shipping Fee",
@@ -274,7 +256,7 @@ class IncomeService:
             "Cash Refund to Buyer Amount",
         ]
 
-        for col in numeric_fields:
+        for col in numeric_cols:
             if col in cleaned.columns:
                 cleaned[col] = (
                     pd.to_numeric(cleaned[col], errors="coerce")
@@ -285,19 +267,72 @@ class IncomeService:
         return cleaned
 
     # --------------------------------------------------
+    # 🚚 OVERCHARGE SHIPPING FEE SUMMARY
+    # --------------------------------------------------
+    def get_overcharge_shipping_fee_summary(self, limit: int = 50) -> pd.DataFrame:
+        if self.income_df is None:
+            self.load_income_data()
+
+        completed_ids = set(
+            self.order_service
+            .get_completed_orders()["Order ID"]
+            .astype(str)
+            .str.strip()
+        )
+
+        df = self.income_df[
+            self.income_df[self.order_id_column]
+            .astype(str)
+            .str.strip()
+            .isin(completed_ids)
+        ].copy()
+
+        column_map = {
+            self.order_id_column: "Order ID",
+            "username (buyer)": "Username (Buyer)",
+            "buyer paid shipping fee": "Buyer Paid Shipping Fee",
+            "shipping fee rebate from shopee":
+                "Shipping Fee Rebate From Shopee",
+            "3rd party logistics - defined shipping fee":
+                "3rd Party Logistics - Defined Shipping Fee",
+        }
+
+        existing = {
+            c: l for c, l in column_map.items() if c in df.columns
+        }
+
+        if "3rd party logistics - defined shipping fee" not in df.columns:
+            return pd.DataFrame(columns=existing.values())
+
+        cleaned = df[list(existing.keys())].rename(columns=existing)
+
+        for col in [
+            "Buyer Paid Shipping Fee",
+            "Shipping Fee Rebate From Shopee",
+            "3rd Party Logistics - Defined Shipping Fee",
+        ]:
+            if col in cleaned.columns:
+                cleaned[col] = (
+                    pd.to_numeric(cleaned[col], errors="coerce")
+                    .fillna(0)
+                    .abs()
+                )
+
+        cleaned = cleaned.sort_values(
+            by="3rd Party Logistics - Defined Shipping Fee",
+            ascending=False
+        ).head(limit)
+
+        return cleaned.reset_index(drop=True)
+
+    # --------------------------------------------------
     # 📤 EXPORT
     # --------------------------------------------------
     def export_missing_orders_to_excel(self) -> BytesIO:
         report = self.get_missing_income_report()
-
         output = BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            report.to_excel(
-                writer,
-                index=False,
-                sheet_name="Missing Income Orders"
-            )
-
+            report.to_excel(writer, index=False)
         output.seek(0)
         return output
 
@@ -331,5 +366,4 @@ class IncomeService:
                 rename[c] = d
 
         report = missing[cols].rename(columns=rename)
-
         return report.fillna("")
