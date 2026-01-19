@@ -68,3 +68,13 @@ def download_report():
         download_name="missing_income_orders.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@main_bp.route("/how-to")
+def how_to():
+    return render_template("how_to.html")
+
+
+@main_bp.route("/about")
+def about():
+    return render_template("about.html")
+
