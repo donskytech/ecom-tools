@@ -160,3 +160,83 @@ class OrderService:
             .head(20)
             .reset_index(drop=True)
         )
+
+
+    # --------------------------------------------------
+    # 🌏 ANALYSIS BY REGION (NEW FEATURE)
+    # --------------------------------------------------
+    def get_region_analysis_summary(self) -> list:
+        """
+        Returns per-region summary:
+        - Total Orders
+        - Completed / Delivered
+        - Failed Delivery (Cancelled by Shopee system)
+        """
+
+        if self.df is None:
+            self.load_data()
+
+        df = self.df.copy()
+
+        # Normalize required columns
+        df["Order Status"] = df["Order Status"].astype(str).str.strip()
+        df["Cancel reason"] = df.get("Cancel reason", "").astype(str).str.strip()
+        df["Province"] = df["Province"].astype(str).str.strip()
+
+        # --------------------------------------------------
+        # FILTER VALID RECORDS
+        # --------------------------------------------------
+        valid_completed = df["Order Status"].isin([
+            "Completed",
+            "Delivered",
+            "Order Received"
+        ])
+
+        valid_cancelled = (
+            (df["Order Status"] == "Cancelled") &
+            (df["Cancel reason"]
+                .str.contains("failed", case=False, na=False))
+        )
+
+        filtered = df[valid_completed | valid_cancelled].copy()
+
+        # --------------------------------------------------
+        # MAP PROVINCE → REGION
+        # --------------------------------------------------
+        def map_region(province: str) -> str:
+            if province in ["Metro Manila", "South Luzon", "North Luzon"]:
+                return "Luzon"
+            if province == "Visayas":
+                return "Visayas"
+            if province == "Mindanao":
+                return "Mindanao"
+            return "Unknown"
+
+        filtered["Region"] = filtered["Province"].apply(map_region)
+
+        # --------------------------------------------------
+        # AGGREGATE RESULTS
+        # --------------------------------------------------
+        results = []
+
+        for region, group in filtered.groupby("Region"):
+            results.append({
+                "region": region,
+                "total_orders": len(group),
+                "completed_delivered": len(
+                    group[group["Order Status"].isin(
+                        ["Completed", "Delivered", "Order Received"]
+                    )]
+                ),
+                "failed_deliveries": len(
+                    group[
+                        (group["Order Status"] == "Cancelled") &
+                        (group["Cancel reason"]
+                            .str.contains("failed", case=False, na=False))
+                    ]
+                )
+            })
+
+            
+
+        return sorted(results, key=lambda x: x["region"])

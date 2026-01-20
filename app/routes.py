@@ -152,6 +152,7 @@ def index():
         # --------------------------------------------------
         _cached_excel = income_service.export_missing_orders_to_excel()
         shipping_overcharge = income_service.get_shipping_overcharge_status()
+        region_summary = order_service.get_region_analysis_summary()
 
         return render_template(
             "results.html",
@@ -166,6 +167,7 @@ def index():
             overcharge_shipping=overcharge_shipping_df.to_dict(orient="records"),
             can_download=len(missing_report_df) > 0,
             shipping_overcharge=shipping_overcharge.to_dict(orient="records"),
+            region_summary=region_summary,
         )
 
     # --------------------------------------------------
