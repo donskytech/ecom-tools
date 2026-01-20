@@ -655,7 +655,10 @@
         <!-- ================= REGION PIE CHARTS ================= -->
         <div class="row g-4 mb-4">
 
-            {% for r in region_summary %}
+            {% for region_name in ["Luzon", "Visayas", "Mindanao"] %}
+            {% set r = (region_summary | selectattr("region", "equalto", region_name) | list | first) %}
+            {% if r %}
+
             <div class="col-md-4">
                 <div class="card shadow-sm">
                     <div class="card-body text-center">
@@ -671,6 +674,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
 
         </div>
@@ -835,6 +839,19 @@
                         legend: {
                             position: "bottom"
                         },
+                        datalabels: {
+                            color: "#ffffff",
+                            font: {
+                                weight: "bold",
+                                size: 14
+                            },
+                            formatter: (value, ctx) => {
+                                const total = ctx.chart.data.datasets[0].data
+                                    .reduce((a, b) => a + b, 0);
+                                const pct = ((value / total) * 100).toFixed(1);
+                                return `${pct}%`;
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function (ctx) {
@@ -847,6 +864,7 @@
                             }
                         }
                     }
+
                 }
             });
         });
